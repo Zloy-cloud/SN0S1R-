@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNOSER — СУДНАЯ НОЧЬ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #06060c;
+    --surface: #0d0d18;
+    --surface2: #12121f;
+    --accent: #39ff14;
+    --accent2: #b026ff;
+    --accent3: #00d4ff;
+    --text: #e8e8f0;
+    --muted: #6e6e8a;
+    --danger: #ff2d55;
+    --warn: #ffcc00;
+    --ok: #39ff14;
+    --border: #1e1e30;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ── CANVAS BACKGROUND ── */
+  #matrix {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* ── LAYOUT ── */
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    background: rgba(6, 6, 12, 0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .brand {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .brand span { color: var(--accent); }
+  .brand em { color: var(--accent2); font-style: normal; }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 120px 0 80px;
+    text-align: center;
+    position: relative;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(57, 255, 20, 0.08);
+    border: 1px solid rgba(57, 255, 20, 0.25);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  .hero h1 {
+    font-size: clamp(42px, 8vw, 88px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.7s 0.1s ease both;
+  }
+  .hero h1 .line1 { color: var(--text); display: block; }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 540px;
+    margin: 0 auto 40px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+  .btn {
+    position: relative;
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.15s, box-shadow 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #00e054 100%);
+    color: #000;
+    box-shadow: 0 8px 30px rgba(57, 255, 20, 0.35);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+  }
+  .btn-secondary:hover { border-color: var(--accent2); box-shadow: 0 8px 30px rgba(176, 38, 255, 0.25); }
+
+  /* ── STATS ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 40px 0 80px;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 32px 24px;
+    text-align: center;
+    transition: background 0.3s;
+  }
+  .stat:hover { background: var(--surface2); }
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: block;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* ── SECTION ── */
+  section { padding: 80px 0; }
+  .section-head {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .section-tag {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-head h2 {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .section-head p {
+    color: var(--muted);
+    margin-top: 12px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── CARDS ── */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 50%), rgba(57,255,20,0.08), transparent 40%);
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .card:hover::before { opacity: 1; }
+  .card:hover {
+    border-color: rgba(57,255,20,0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(57,255,20,0.15), rgba(0,212,255,0.15));
+    border: 1px solid rgba(57,255,20,0.2);
+  }
+  .card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.65; }
+  .card .pill {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(57,255,20,0.1);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .card.danger .card-icon {
+    background: linear-gradient(135deg, rgba(255,45,85,0.15), rgba(255,0,128,0.15));
+    border-color: rgba(255,45,85,0.3);
+  }
+  .card.danger:hover { border-color: rgba(255,45,85,0.5); }
+  .card.purple .card-icon {
+    background: linear-gradient(135deg, rgba(176,38,255,0.15), rgba(0,212,255,0.15));
+    border-color: rgba(176,38,255,0.3);
+  }
+  .card.purple:hover { border-color: rgba(176,38,255,0.5); }
+
+  /* ── TELEGRAM PREVIEW MOCKUP ── */
+  .mockup-section {
+    background: linear-gradient(180deg, transparent, rgba(57,255,20,0.02), transparent);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .phone-mock {
+    width: 320px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  }
+  .phone-header {
+    background: var(--surface2);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .phone-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 16px rgba(57,255,20,0.4);
+  }
+  .phone-title { font-weight: 700; font-size: 15px; }
+  .phone-sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .phone-body { padding: 16px; min-height: 380px; }
+  .msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    line-height: 1.45;
+  }
+  .msg.bot {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    margin-right: auto;
+  }
+  .msg.user {
+    background: linear-gradient(135deg, #1a3a2a, #0f2a22);
+    border: 1px solid rgba(57,255,20,0.2);
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+    color: var(--accent);
+  }
+  .msg .time {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-align: right;
+  }
+  .inline-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .inline-btn {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .inline-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .inline-btn.active {
+    background: rgba(57,255,20,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .phone-input {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .phone-input input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .phone-input input:focus { border-color: var(--accent); }
+  .phone-input button {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ── FEATURES GRID ── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    transition: all 0.25s;
+  }
+  .feature:hover {
+    border-color: var(--accent3);
+    box-shadow: 0 0 30px rgba(0,212,255,0.1);
+  }
+  .feature-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .feature h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .feature p { color: var(--muted); font-size: 13px; }
+
+  /* ── CMD PALETTE PREVIEW ── */
+  .cmd-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+    font-size: 13px;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  }
+  .cmd-bar {
+    background: var(--surface2);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .cmd-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .cmd-body { padding: 20px; }
+  .cmd-line { display: flex; gap: 12px; margin-bottom: 6px; }
+  .cmd-prompt { color: var(--accent); user-select: none; }
+  .cmd-cmd { color: var(--text); }
+  .cmd-out { color: var(--muted); padding-left: 24px; margin-bottom: 8px; }
+  .cmd-keyword { color: var(--accent2); }
+  .cmd-string { color: var(--warn); }
+  .cmd-cursor {
+    display: inline-block;
+    width: 8px; height: 16px;
+    background: var(--accent);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer span { color: var(--accent); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+  }
+  @keyframes scan {
+    0%   { top: -10%; }
+    100% { top: 110%; }
+  }
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.25;
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+  }
+
+  /* ── UTIL ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .glow-text {
+    text-shadow: 0 0 20px rgba(57,255,20,0.4), 0 0 60px rgba(57,255,20,0.2);
+  }
+
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .nav-links { display: none; }
+    .hero { padding: 80px 0 60px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>S</span><sup>1</sup><em>R</em></div>
+    <ul class="nav-links">
+      <li><a href="#features">Возможности</a></li>
+      <li><a href="#interface">Интерфейс</a></li>
+      <li><a href="#terminal">Терминал</a></li>
+      <li><a href="#stack">Стек</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-badge">v2.0 · OPERATIONAL</div>
+    <h1>
+      <span class="line1">SNOSER</span>
+      <span class="line2">СУДНАЯ НОЧЬ</span>
+    </h1>
+    <p class="hero-sub">
+      Высоконагруженный Telegram-инструмент. Email + Web-атаки, флуд, прокси-ротация, лимиты. Поддержка 247+ потоков.
+    </p>
+    <div class="cta-group">
+      <a class="btn btn-primary" href="https://t.me/snos1r_sudnaja_noc_robot" target="_blank">
+        <span>⚡</span> Открыть бота
+      </a>
+      <a class="btn btn-secondary" href="#features">
+        <span>🔍</span> Подробнее
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="wrap">
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-value" data-count="247">0</span>
+      <span class="stat-label">Макс. потоков</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" data-count="100">0</span>
+      <span class="stat-label">Лимит жалоб</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" data-count="2">0</span>
+      <span class="stat-label">Метода атаки</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" data-count="50">0</span>
+      <span class="stat-label">Прокси в пуле</span>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-tag">// capabilities</div>
+      <h2>Что умеет бот</h2>
+      <p>Два вектора атаки с ротацией прокси и жёсткими лимитами.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon">📧</div>
+        <h3>Email-рассылка</h3>
+        <p>SMTP-аутентификация через пул ящиков. Поддержка TLS/STARTTLS, auto-config по домену.</p>
+        <span class="pill">SMTP</span>
+      </div>
+      <div class="card purple">
+        <div class="card-icon">🌐</div>
+        <h3>Web-жалобы</h3>
+        <p>Прямая отправка на telegram.org/support с уникальными прокси, UA и данными для каждой жалобы.</p>
+        <span class="pill">PROXY-ROTATION</span>
+      </div>
+      <div class="card danger">
+        <div class="card-icon">💣</div>
+        <h3>Флуд-запросы</h3>
+        <p>Массовые HTTP-запросы к API Telegram через случайные прокси. Квота и задержки — в настройках.</p>
+        <span class="pill">FLOOD</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>Лимиты</h3>
+        <p>Жёсткое ограничение MAX_SENDS = 100. Общий счётчик для email + web в рамках одной сессии.</p>
+        <span class="pill">HARD LIMIT</span>
+      </div>
+      <div class="card purple">
+        <div class="card-icon">⚡</div>
+        <h3>247 потоков</h3>
+        <p>5 режимов: 1 / 26 / 57 / 156 / 247 параллельных задач. Asyncio + aiohttp.</p>
+        <span class="pill">ASYNC</span>
+      </div>
+      <div class="card danger">
+        <div class="card-icon">🛡️</div>
+        <h3>Анонимность</h3>
+        <p>Каждая жалоба — новый прокси, новый User-Agent, новый email и телефон. Рандомизация на уровне запроса.</p>
+        <span class="pill">OP-SEC</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTERFACE MOCKUP -->
+<section id="interface" class="mockup-section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-tag">// interface</div>
+      <h2>Интерфейс</h2>
+      <p>Telegram UI с кастомными клавиатурами, прогрессом и статусами.</p>
+    </div>
+
+    <div class="phone-mock">
+      <div class="phone-header">
+        <div class="phone-avatar">💣</div>
+        <div>
+          <div class="phone-title">SNOSER BOT</div>
+          <div class="phone-sub">онлайн · готов к атаке</div>
+        </div>
+      </div>
+      <div class="phone-body">
+        <div class="msg bot">
+          Привет, оператор. Выбери тип цели 👇<br>
+          <div class="inline-btns">
+            <span class="inline-btn active">👤 Аккаунт</span>
+            <span class="inline-btn">📢 Канал</span>
+            <span class="inline-btn">🤖 Бот</span>
+            <span class="inline-btn">💬 Чат</span>
+          </div>
+          <div class="time">12:00</div>
+        </div>
+        <div class="msg user">
+          /new acc_spam<br>@target | 123456 | t.me/chat | t.me/violation
+          <div class="time">12:01</div>
+        </div>
+        <div class="msg bot">
+          📋 <b>ПОДТВЕРЖДЕНИЕ АТАКИ</b><br><br>
+          🎯 Цель: <span style="color:var(--accent)">acc_spam</span><br>
+          📧 Метод: <span style="color:var(--accent3)">email + web</span><br>
+          ⚡ Режим: <span style="color:var(--accent2)">5 (247 потоков)</span><br>
+          📨 Почты: <span style="color:var(--warn)">2 шт</span><br><br>
+          Запускаем?
+          <div class="inline-btns">
+            <span class="inline-btn active">🚀 Запустить</span>
+            <span class="inline-btn">❌ Отмена</span>
+          </div>
+          <div class="time">12:01</div>
+        </div>
+        <div class="msg bot" style="border-color:rgba(57,255,20,0.3);">
+          🚀 <b>АТАКА ИДЁТ...</b><br><br>
+          ✅ Отправлено: <span style="color:var(--ok)">47</span><br>
+          ❌ Ошибок: <span style="color:var(--danger)">3</span><br>
+          📊 Всего: 50/100<br>
+          <div style="height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;">
+            <div style="height:100%;width:50%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:2px;"></div>
+          </div>
+          <div class="time">сейчас</div>
+        </div>
+      </div>
+      <div class="phone-input">
+        <input type="text" placeholder="Введи команду..." value="/new" readonly>
+        <button>➤</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TERMINAL -->
+<section id="terminal">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-tag">// terminal</div>
+      <h2>Консоль запуска</h2>
+      <p>Логирование, прогресс и контроль в реальном времени.</p>
+    </div>
+
+    <div class="cmd-preview">
+      <div class="cmd-bar">
+        <div class="cmd-dot" style="background:#ff5f57;"></div>
+        <div class="cmd-dot" style="background:#febc2e;"></div>
+        <div class="cmd-dot" style="background:#28c840;"></div>
+        <span style="margin-left:auto;">snos1r — zsh — 80×24</span>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-line"><span class="cmd-prompt">➜</span><span class="cmd-cmd"> python sns.py</span></div>
+        <div class="cmd-out">
+          ╔══════════════════════════════════════╗<br>
+          ║  💣 <span class="cmd-keyword">SNOSER BOT v2.0</span>           ║<br>
+          ║  Почты: <span class="cmd-string">2 шт</span>                   ║<br>
+          ║  Методы: Email + Web              ║<br>
+          ║  Потоки: до <span class="cmd-keyword">247</span>                ║<br>
+          ║  Запущен!                          ║<br>
+          ╚══════════════════════════════════════╝
+        </div>
+        <div class="cmd-line"><span class="cmd-prompt">🔗</span><span class="cmd-cmd"> Подключение к Telegram...</span></div>
+        <div class="cmd-out" style="color:var(--ok);">✅ Подключено! @snos1r_sudnaja_noc_robot</div>
+        <div class="cmd-line"><span class="cmd-prompt">[CHECK]</span><span class="cmd-cmd"> ✅ SMTP вход: ila014165@gmail.com</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[EMAIL]</span><span class="cmd-cmd"> ✅ ila014165@gmail.com → stopca@telegram.org</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[EMAIL]</span><span class="cmd-cmd"> ✅ zxsinner322@gmail.com → stopca@telegram.org</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[WEB]</span><span class="cmd-cmd"> ✅ 1/<span class="cmd-string">15</span> | proxy=45.131.6.46:80</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[WEB]</span><span class="cmd-cmd"> ✅ 2/<span class="cmd-string">15</span> | proxy=172.67.70.113:80</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[ATTACK]</span><span class="cmd-cmd"> 💣 Запуск: acc_session | Режим: 5</span></div>
+        <div class="cmd-line"><span class="cmd-prompt">[STATUS]</span><span class="cmd-cmd"> ✅ <span class="cmd-keyword">47</span> отправлено · ❌ <span class="cmd-keyword">3</span> ошибок · 📊 <span class="cmd-keyword">50/100</span></span></div>
+        <div class="cmd-line"><span class="cmd-prompt">➜</span><span class="cmd-cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="stack">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="section-tag">// stack</div>
+      <h2>Стек</h2>
+      <p>Минимальный набор, максимальная производительность.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="feature-num">01</div>
+        <h4>aiogram 3.x</h4>
+        <p>Асинхронный MTProto-фреймворк для Telegram Bot API.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">02</div>
+        <h4>aiohttp</h4>
+        <p>HTTP-клиент с поддержкой прокси для Web-жалоб.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">03</div>
+        <h4>aiosmtplib</h4>
+        <p>Асинхронный SMTP для массовой почтовой рассылки.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">04</div>
+        <h4>asyncio</h4>
+        <p>Событийный цикл + пул задач до 247 параллельных.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">05</div>
+        <h4>requests</h4>
+        <p>Синхронный HTTP для проверки прокси и флуда.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-num">06</div>
+        <h4>Proxy-list API</h4>
+        <p>Автообновление пула HTTP-прокси через CDN.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <span>SNOSER</span> · СУДНАЯ НОЧЬ · v2.0 · <span style="color:var(--muted)">Операционная. Анонимная. Эффективная.</span>
+  </div>
+</footer>
+
+<script>
+  // ── MATRIX BACKGROUND ──
+  const canvas = document.getElementById('matrix');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+  resize();
+  addEventListener('resize', resize);
+
+  const chars = 'SNOSER01アイウエオカキク'.split('');
+  const fontSize = 14;
+  const columns = Math.floor(W / fontSize);
+  const drops = Array(columns).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(6,6,12,0.12)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#39ff14';
+    ctx.font = `${fontSize}px monospace`;
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > H && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(drawMatrix, 55);
+
+  // ── CARD MOUSE GLOW ──
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - rect.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - rect.top) + 'px');
+    });
+  });
+
+  // ── COUNTERS ──
+  const counters = document.querySelectorAll('.stat-value[data-count]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = +el.dataset.count;
+        const duration = 1600;
+        const start = performance.now();
+        const step = now => {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.floor(eased * target);
+          if (progress < 1) requestAnimationFrame(step);
+          else el.textContent = target;
+        };
+        requestAnimationFrame(step);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+  counters.forEach(c => observer.observe(c));
+
+  // ── SMOOTH SCROLL ──
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const id = a.getAttribute('href');
+      const el = document.querySelector(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>
